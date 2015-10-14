@@ -1,4 +1,5 @@
 nginx:
   cpus: 1
   memory: 256mb
+  disk: 2g
   instances: 2
