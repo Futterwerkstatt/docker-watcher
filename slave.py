@@ -1,9 +1,8 @@
 #!/usr/bin/env python
-
 import tornado.ioloop
 import tornado.web
 import tornado.httputil
-import etcd
+import tornado.escape
 import yaml
 
 import psutil
@@ -13,46 +12,11 @@ import docker
 import settings_slave
 
 
-class EtcdClient:
-    def __init__(self, host='localhost', port=4001):
-        self.etcd_client = etcd.client.Client(host=host, port=port)
-
-    def set(self, key, value):
-        key_str = '/docker-watcher/' + key
-        self.etcd_client.set(key_str, value)
-
-    def get(self, key):
-        key_str = '/docker-watcher/' + key
-        return self.etcd_client.get(key_str).value
-
-
-class DockerClient:
-    def __init__(self, url='unix://var/run/docker.sock'):
-        self.client = docker.Client(base_url=url)
-
-class HostInfo:
-
-    def __init__(self):
-        self.used_cpus = 0
-        self.used_memory = 0
-        self.used_disk = 0
-
-    def use_disk(self, disk):
-        self.used_disk += disk
-
-    def use_cpus(self, cpus):
-        self.used_cpus += cpus
-
-    def use_memory(self, memory):
-        self.used_memory += memory
-
-    def get_used_memory(self):
-
 class DockerWatcherSlave:
-    def __init__(self):
-        self.etcd_client = EtcdClient(host=settings_slave.etcd_host,
-                                      port=settings_slave.etcd_port)
+    docker_client = docker.Client()
 
+    def __init__(self):
+        self.docker_client = docker.Client(base_url=settings_slave.docker_url)
 
     class InfoHandler(tornado.web.RequestHandler):
         def return_mb(self, value):
@@ -62,21 +26,44 @@ class DockerWatcherSlave:
             print '/info'
             info_dict = {}
             info_dict['total_cpus'] = psutil.cpu_count()
-            info_dict['used_cpus'] = DockerWatcherSlave.used_cpus
             info_dict['total_memory'] = self.return_mb(psutil.virtual_memory().total)
-            info_dict['used_memory'] = DockerWatcherSlave.used_memory
-            info_dict['total_disk'] =
+            info_dict['total_disk'] = self.return_mb(psutil.disk_usage('/').total)
+            info_dict['total_network'] = psutil.net_if_stats()['eth0'].speed
             self.write(yaml.dump(info_dict))
 
     class StopHandler(tornado.web.RequestHandler):
         def get(self):
             print '/stop'
+            self.write('stopping\n')
             tornado.ioloop.IOLoop.instance().stop()
+
+    class RunHandler(tornado.web.RequestHandler):
+        def get(self, image, command):
+            self.image = tornado.escape.url_unescape(image)
+            self.command = tornado.escape.url_unescape(command)
+            print 'running ' + self.image + ' ' + self.command
+            DockerWatcherSlave.docker_client.pull(image)
+            self.container = DockerWatcherSlave.docker_client.create_container(
+                image=self.image, command=self.command
+            )
+            start_response = DockerWatcherSlave.docker_client \
+                .start(container=self.container.get('Id'))
+            self.write(self.container.get('Id'))
+
+    class KillHandler(tornado.web.RequestHandler):
+        def get(self, container_id):
+            print 'killing ' + container_id
+            kill_response = DockerWatcherSlave.docker_client.kill(
+                container=container_id)
+            self.write(kill_response)
 
     def run(self):
         self.tornadoapp = tornado.web.Application([
             (r'/info', DockerWatcherSlave.InfoHandler),
-            (r'/stop', DockerWatcherSlave.StopHandler)])
+            (r'/stop', DockerWatcherSlave.StopHandler),
+            (r'/run/(.*)/(.*)', DockerWatcherSlave.RunHandler),
+            (r'/kill/(.*)', DockerWatcherSlave.KillHandler)
+        ])
         self.tornadoapp.listen(settings_slave.listen_port,
                                settings_slave.listen_host)
         tornado.ioloop.IOLoop.instance().start()
@@ -87,3 +74,4 @@ if __name__ == '__main__':
     docker_watcher = DockerWatcherSlave()
     docker_watcher.run()
     print 'exiting'
+    exit(0)

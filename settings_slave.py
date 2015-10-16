@@ -1,6 +1,4 @@
 hostname = 'slave'
-docker_host = '192.168.99.100:2376'
-etcd_host = 'localhost'
-etcd_port = 2379
+docker_url = 'unix://var/run/docker.sock'
 listen_host = '::'
 listen_port = 8888
