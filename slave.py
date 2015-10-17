@@ -38,17 +38,18 @@ class DockerWatcherSlave:
             tornado.ioloop.IOLoop.instance().stop()
 
     class RunHandler(tornado.web.RequestHandler):
-        def get(self, image, command):
-            self.image = tornado.escape.url_unescape(image)
-            self.command = tornado.escape.url_unescape(command)
-            print 'running ' + self.image + ' ' + self.command
+        def post(self):
+            print yaml.load(self.request.body)
+            self.image =
+            self.command =
             DockerWatcherSlave.docker_client.pull(image)
             self.container = DockerWatcherSlave.docker_client.create_container(
                 image=self.image, command=self.command
             )
-            start_response = DockerWatcherSlave.docker_client \
-                .start(container=self.container.get('Id'))
-            self.write(self.container.get('Id'))
+            #start_response = DockerWatcherSlave.docker_client \
+            #    .start(container=self.container.get('Id'))
+            #self.write(self.container.get('Id'))
+            #self.set_status(200)
 
     class KillHandler(tornado.web.RequestHandler):
         def get(self, container_id):
@@ -61,7 +62,7 @@ class DockerWatcherSlave:
         self.tornadoapp = tornado.web.Application([
             (r'/info', DockerWatcherSlave.InfoHandler),
             (r'/stop', DockerWatcherSlave.StopHandler),
-            (r'/run/(.*)/(.*)', DockerWatcherSlave.RunHandler),
+            (r'/run', DockerWatcherSlave.RunHandler),
             (r'/kill/(.*)', DockerWatcherSlave.KillHandler)
         ])
         self.tornadoapp.listen(settings_slave.listen_port,
