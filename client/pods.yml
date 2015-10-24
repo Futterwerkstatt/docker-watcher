@@ -2,6 +2,6 @@ name: example
 image: busybox:latest
 command: /bin/echo 1
 cpus: 1
-memory: 256mb
-disk: 2g
-instances: 2
+memory: 256
+disk: 2
+instances: 1
