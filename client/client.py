@@ -24,7 +24,7 @@ def add_slave(server, slaveaddr):
 def run_pod(server, podname):
     url = 'http://' + server + '/run_pod'
     req = requests.post(url, data=podname)
-    print req.status_code
+    print req.text
 
 
 def slave_info(server, slavename):
