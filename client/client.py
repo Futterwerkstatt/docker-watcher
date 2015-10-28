@@ -45,6 +45,10 @@ def upload_slave(slave, filename):
         print '=== ' + cmd + ' ==='
         print subprocess.Popen(cmd, shell=True,
                                stdout=subprocess.PIPE).stdout.read()
+def cluster_info(server):
+    url = 'http://' + server + '/cluster_info'
+    req = requests.get(url)
+    print req.text
 
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
@@ -68,3 +72,5 @@ if __name__ == '__main__':
         add_slave(server, args['slave'])
     elif action == 'slave_info':
         slave_info(server, args['slave'])
+    elif action == 'cluster_info':
+        cluster_info(server)

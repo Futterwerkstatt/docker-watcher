@@ -12,7 +12,8 @@ import docker
 
 import settings_slave
 
-logging.basicConfig(filename=settings_slave.log, level=4)
+logging.basicConfig(filename=settings_slave.log, level=4,
+                    format = u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',)
 ch = logging.StreamHandler(sys.stdout)
 logging.debug('starting slave')
 
@@ -47,16 +48,21 @@ class DockerWatcherSlave:
     class RunHandler(tornado.web.RequestHandler):
         def post(self):
             logging.debug('/run')
-            data = yaml.safe_dump(self.request.body)
+            data = yaml.safe_load(self.request.body)
             logging.debug(data)
             image = data['image']
             command = data['command']
+            memory = data['memory']
+            logging.debug('1')
             DockerWatcherSlave.docker_client.pull(image)
+            logging.debug('2')
             self.container = DockerWatcherSlave.docker_client.create_container(
                 image=image, command=command)
-            # start_response = DockerWatcherSlave.docker_client \
-            #    .start(container=self.container.get('Id'))
-            # self.write(self.container.get('Id'))
+            logging.debug('3')
+            start_response = DockerWatcherSlave.docker_client \
+                .start(container=self.container.get('Id'))
+            logging.debug('4')
+            self.write(self.container.get('Id'))
             self.set_status(200)
 
     class KillHandler(tornado.web.RequestHandler):
@@ -66,6 +72,7 @@ class DockerWatcherSlave:
             kill_response = DockerWatcherSlave.docker_client.kill(
                 container=container_id)
             self.write(kill_response)
+            self.set_status(200)
 
     def run(self):
         self.tornadoapp = tornado.web.Application([
