@@ -50,6 +50,16 @@ def cluster_info(server):
     req = requests.get(url)
     print req.text
 
+def stop_master(server):
+    url = 'http://' + server + '/stop_master'
+    req = requests.get(url)
+    print req.text
+
+def pods_info(server):
+    url = 'http://' + server + '/pods_info'
+    req = requests.get(url)
+    print req.text
+
 if __name__ == '__main__':
     arg_parser = argparse.ArgumentParser()
     arg_parser.add_argument('-s', '--server', help='master server url to connect')
@@ -74,3 +84,12 @@ if __name__ == '__main__':
         slave_info(server, args['slave'])
     elif action == 'cluster_info':
         cluster_info(server)
+    elif action == 'pods_info':
+        pods_info(server)
+    elif action == 'stop_master':
+        stop_master(server)
+    elif action == 'stop_slave':
+        stop_slave(server, args['slave'])
+    else:
+        print 'wrong action'
+        exit(1)

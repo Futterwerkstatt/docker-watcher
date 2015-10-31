@@ -1,10 +1,10 @@
 #!/usr/bin/env python
 
-import time
 import logging
 import sys
-
-import etcd
+import os
+sys.path.insert(1, os.path.join(sys.path[0], '..'))
+from common import EtcdClient
 import yaml
 import tornado.ioloop
 import tornado.web
@@ -19,49 +19,7 @@ logging.basicConfig(filename=settings_master.log, level=4,
 ch = logging.StreamHandler(sys.stdout)
 logging.debug('starting master')
 
-
-class EtcdClient:
-    def __init__(self, host='localhost', port=4001):
-        self.etcd_client = etcd.client.Client(host=host, port=port)
-
-    def set(self, key, value):
-        key_str = '/docker-watcher/' + key
-        self.etcd_client.set(key_str, value)
-
-    def get(self, key):
-        key_str = '/docker-watcher/' + key
-        logging.debug(key_str)
-        return self.etcd_client.get(key_str).value
-
-    def lock(self, key):
-        key_str = '/docker-watcher/' + key
-        i = 0
-        lock = self.etcd_client.get_lock(key_str, ttl=60)
-        while (i < 60):
-            lock.acquire()
-            if (lock.is_locked()):
-                logging.debug(key_str + ' locked')
-                return lock
-            else:
-                time.sleep(1)
-        logging.debug('unable to get lock on ' + key_str)
-        return 1
-
-    def unlock(self, lock):
-        logging.debug('unlock ' + lock)
-        lock.release()
-        return 0
-
-    def ls(self, key):
-        ret = []
-        key_str = '/docker-watcher/' + key
-        r = self.etcd_client.read(key_str, recursive=True, sorted=True)
-        for d in r.children:
-            ret.append(str(d.key).split('/')[-1])
-        return ret
-
-
-etcd_client = EtcdClient(settings_master.etcd_host, settings_master.etcd_port)
+etcd_client = EtcdClient.EtcdClient(settings_master.etcd_host, settings_master.etcd_port)
 
 
 class DockerWatcherMaster:
@@ -103,7 +61,10 @@ class DockerWatcherMaster:
             pod_config = yaml.safe_load(etcd_client.get('pods/' + podname))
             slaves_list = etcd_client.ls('slaves/')
             instances_count = pod_config['instances']
-            ids = []
+            running_pod = {}
+            running_pod['name'] = podname
+            running_pod['tasks'] = []
+            good_slaves = []
             for slave in slaves_list:
                 slave_config = yaml.safe_load(etcd_client.get('slaves/' + slave))
                 free_cpus = int(slave_config['total_cpus']) \
@@ -118,8 +79,17 @@ class DockerWatcherMaster:
                 required_disk = int(pod_config['disk'])
 
                 if required_cpus <= free_cpus and required_memory <= free_memory and required_disk <= free_disk:
-                    self.url = 'http://' + slave + '/run_pod'
+                    good_slaves.append(slave)
+
+            if len(good_slaves) < instances_count:
+                logging.debug("don't have resources to run pod")
+                self.write("don't have resources to run pod")
+                self.set_status(500)
+            else:
+                for slave in good_slaves:
+                    #self.url = 'http://' + slave + '/run_pod'
                     self.body = str(yaml.safe_dump(pod_config))
+                    slave_config = yaml.safe_load(etcd_client.get('slaves/' + slave))
                     req = requests.post(self.url, data=self.body)
                     used_cpus = int(slave_config['used_cpus']) + required_cpus
                     used_memory = int(slave_config['used_memory']) + required_memory
@@ -128,12 +98,13 @@ class DockerWatcherMaster:
                     slave_config['used_memory'] = used_memory
                     slave_config['used_disk'] = used_disk
                     etcd_client.set('slaves/' + slave, str(yaml.safe_dump(slave_config)))
-                    ids.append(req.text)
+                    running_pod['tasks'].append({'slave': slave, 'id': req.text})
                     instances_count -= 1
                     if instances_count == 0:
                         break
-                self.write(yaml.safe_dump(ids))
-                self.set_status(200)
+                    etcd_client.set('running_pods/' + podname, running_pod)
+                    self.write(yaml.safe_dump(running_pod))
+                    self.set_status(200)
 
     class SlaveInfoHandler(tornado.web.RequestHandler):
         def post(self):
@@ -154,13 +125,44 @@ class DockerWatcherMaster:
             self.write(yaml.safe_dump(info))
             self.set_status(200)
 
+    class StopMasterHandler(tornado.web.RequestHandler):
+        def get(self):
+            logging.debug('/stop_master')
+            self.write('stopping master\n')
+            self.set_status(200)
+            tornado.ioloop.IOLoop.instance().stop()
+
+    class StopSlaveHandler(tornado.web.RequestHandler):
+        def post(self):
+            logging.debug('/stop_slave')
+            slave = self.request.body
+            url = 'http://' + slave + '/stop'
+            req = requests.get(url)
+            self.write(req.text)
+            self.set_status(200)
+
+    class PodsInfoHandler(tornado.web.RequestHandler):
+        def get(self):
+            logging.debug('/pods_info')
+            info = []
+            slaves_list = etcd_client.ls('slaves/')
+            for slave in slaves_list:
+                url = 'http://' + slave + '/get_pods'
+                req = requests.get(url)
+                info.append(req.text)
+            self.write(str(info))
+            self.set_status(200)
+
     def run(self):
         self.tornadoapp = tornado.web.Application([
             (r'/slave_info', DockerWatcherMaster.SlaveInfoHandler),
             (r'/add_pod', DockerWatcherMaster.AddPodHandler),
             (r'/add_slave', DockerWatcherMaster.AddSlaveHandler),
             (r'/run_pod', DockerWatcherMaster.RunPodHandler),
-            (r'/cluster_info', DockerWatcherMaster.ClusterInfoHandler)
+            (r'/cluster_info', DockerWatcherMaster.ClusterInfoHandler),
+            (r'/pods_info', DockerWatcherMaster.PodsInfoHandler),
+            (r'/stop_master', DockerWatcherMaster.StopMasterHandler),
+            (r'/stop_slave', DockerWatcherMaster.StopSlaveHandler)
             # (r'/kill/(.*)', DockerWatcherMaster.KillHandler)
         ])
         self.tornadoapp.listen(settings_master.listen_port,

@@ -16,10 +16,11 @@ logging.basicConfig(filename=settings_slave.log, level=4,
                     format = u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',)
 ch = logging.StreamHandler(sys.stdout)
 logging.debug('starting slave')
+docker_client = docker.Client()
 
 
 class DockerWatcherSlave:
-    docker_client = docker.Client()
+
 
     def __init__(self):
         self.docker_client = docker.Client(base_url=settings_slave.docker_url)
@@ -41,7 +42,7 @@ class DockerWatcherSlave:
     class StopHandler(tornado.web.RequestHandler):
         def get(self):
             logging.debug('/stop')
-            self.write('stopping\n')
+            self.write('stopping slave\n')
             self.set_status(200)
             tornado.ioloop.IOLoop.instance().stop()
 
@@ -53,15 +54,14 @@ class DockerWatcherSlave:
             image = data['image']
             command = data['command']
             memory = data['memory']
-            logging.debug('1')
-            DockerWatcherSlave.docker_client.pull(image)
-            logging.debug('2')
-            self.container = DockerWatcherSlave.docker_client.create_container(
+            logging.debug('pull ' + image)
+            docker_client.pull(image)
+            logging.debug('create_container')
+            self.container = docker_client.create_container(
                 image=image, command=command)
-            logging.debug('3')
-            start_response = DockerWatcherSlave.docker_client \
+            logging.debug('start_container')
+            start_response = docker_client \
                 .start(container=self.container.get('Id'))
-            logging.debug('4')
             self.write(self.container.get('Id'))
             self.set_status(200)
 
@@ -69,17 +69,26 @@ class DockerWatcherSlave:
         def get(self):
             logging.debug('/kill')
             container_id = self.request.body
-            kill_response = DockerWatcherSlave.docker_client.kill(
+            kill_response = docker_client.kill(
                 container=container_id)
             self.write(kill_response)
             self.set_status(200)
+
+    class GetPodsHandler(tornado.web.RequestHandler):
+        def get(self):
+            logging.debug('/get_pods')
+            response = str(docker_client.containers(all=True))
+            self.write(response)
+            self.set_status(200)
+
 
     def run(self):
         self.tornadoapp = tornado.web.Application([
             (r'/info', DockerWatcherSlave.InfoHandler),
             (r'/stop', DockerWatcherSlave.StopHandler),
             (r'/run_pod', DockerWatcherSlave.RunHandler),
-            (r'/kill', DockerWatcherSlave.KillHandler)
+            (r'/kill', DockerWatcherSlave.KillHandler),
+            (r'/get_pods', DockerWatcherSlave.GetPodsHandler)
         ])
         self.tornadoapp.listen(settings_slave.listen_port,
                                settings_slave.listen_host)

@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
-set -x
 SRV=$1
-scp ../master/master.py root@$SRV:/opt/docker-watcher/master/
-scp ../master/settings_master.py root@$SRV:/opt/docker-watcher/master/
+ssh root@$SRV service docker-watcher-master stop
+rsync -a ../../docker-watcher root@$SRV:/opt/
 scp ../master/docker-watcher-master.conf root@$SRV:/etc/init/
-ssh root@$SRV service docker-watcher-master restart
+ssh root@$SRV service docker-watcher-master start
