@@ -55,6 +55,11 @@ def stop_master(server):
     req = requests.get(url)
     print req.text
 
+def containers_info(server):
+    url = 'http://' + server + '/containers_info'
+    req = requests.get(url)
+    print req.text
+
 def pods_info(server):
     url = 'http://' + server + '/pods_info'
     req = requests.get(url)
@@ -84,12 +89,14 @@ if __name__ == '__main__':
         slave_info(server, args['slave'])
     elif action == 'cluster_info':
         cluster_info(server)
-    elif action == 'pods_info':
-        pods_info(server)
+    elif action == 'containers_info':
+        containers_info(server)
     elif action == 'stop_master':
         stop_master(server)
     elif action == 'stop_slave':
         stop_slave(server, args['slave'])
+    elif action == 'pods_info':
+        pods_info(server)
     else:
         print 'wrong action'
         exit(1)

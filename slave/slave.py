@@ -73,9 +73,9 @@ class DockerWatcherSlave:
             self.write(kill_response)
             self.set_status(200)
 
-    class GetPodsHandler(tornado.web.RequestHandler):
+    class GetContainersHandler(tornado.web.RequestHandler):
         def get(self):
-            logging.warning('/get_pods')
+            logging.warning('/get_containers')
             response = str(docker_client.containers(all=True))
             self.write(response)
             self.set_status(200)
@@ -87,7 +87,7 @@ class DockerWatcherSlave:
             (r'/stop', DockerWatcherSlave.StopHandler),
             (r'/run_pod', DockerWatcherSlave.RunHandler),
             (r'/kill', DockerWatcherSlave.KillHandler),
-            (r'/get_pods', DockerWatcherSlave.GetPodsHandler)
+            (r'/get_containers', DockerWatcherSlave.GetContainersHandler)
         ])
         self.tornadoapp.listen(settings_slave.listen_port,
                                settings_slave.listen_host)

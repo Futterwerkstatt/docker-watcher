@@ -100,7 +100,7 @@ class DockerWatcherMaster:
     class ClusterInfoHandler(tornado.web.RequestHandler):
         def get(self):
             '''get cluster info'''
-            logging.warning('cluster_info')
+            logging.info('cluster_info')
             etcd_client.lock()
             slaves_list = etcd_client.ls('slaves/')
             info = []
@@ -129,17 +129,33 @@ class DockerWatcherMaster:
             self.write(req.text)
             self.set_status(200)
 
-    class PodsInfoHandler(tornado.web.RequestHandler):
+    class ContainersInfoHandler(tornado.web.RequestHandler):
         def get(self):
-            '''get pods info'''
-            logging.warning('/pods_info')
+            '''get containers info'''
+            logging.warning('/containers_info')
+            etcd_client.lock()
             info = []
             slaves_list = etcd_client.ls('slaves/')
             for slave in slaves_list:
-                url = 'http://' + slave + '/get_pods'
+                url = 'http://' + slave + '/get_containers'
                 req = requests.get(url)
                 info.append(req.text)
-            self.write(str(info))
+            etcd_client.unlock()
+            self.write(yaml.safe_load(info))
+            self.set_status(200)
+
+    class PodsInfoHandler(tornado.web.RequestHandler):
+        def get(self):
+            ''' get pods info '''
+            logging.warning('/pods_info')
+            etcd_client.lock()
+            pods_info = []
+            pods = etcd_client.ls('pods/')
+            for pod in pods:
+                pod_info = yaml.safe_load(etcd_client.get('pods/' + pod))
+                pods_info.append(pod_info)
+            etcd_client.unlock()
+            self.write(yaml.safe_dump(pods_info))
             self.set_status(200)
 
     def run(self):
@@ -150,9 +166,10 @@ class DockerWatcherMaster:
             (r'/add_slave', DockerWatcherMaster.AddSlaveHandler),
             (r'/run_pod', DockerWatcherMaster.RunPodHandler),
             (r'/cluster_info', DockerWatcherMaster.ClusterInfoHandler),
-            (r'/pods_info', DockerWatcherMaster.PodsInfoHandler),
+            (r'/containers_info', DockerWatcherMaster.ContainersInfoHandler),
             (r'/stop_master', DockerWatcherMaster.StopMasterHandler),
-            (r'/stop_slave', DockerWatcherMaster.StopSlaveHandler)
+            (r'/stop_slave', DockerWatcherMaster.StopSlaveHandler),
+            (r'/pods_info', DockerWatcherMaster.PodsInfoHandler)
             # (r'/kill/(.*)', DockerWatcherMaster.KillHandler)
         ])
         self.tornadoapp.listen(settings_master.listen_port,

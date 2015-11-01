@@ -4,12 +4,8 @@
 <head>
     <title>Docker Watcher</title>
     <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
+    <!--- <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">  --->
     <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
-</head>
-
-<body>
-<div class="container">
     <style>
         table {
             margin: 0 auto;
@@ -19,44 +15,70 @@
             text-align: center;
             vertical-align: middle;
         }
-    </style>
-    <div class="header">
-        <nav>
-            <ul class="nav nav-pills pull-left">
-                <li role="presentation" class="active"><a href="#">nodes</a>
-                </li>
-                <li role="presentation" class="active"><a href="#">pods</a>
-                </li>
-            </ul>
-        </nav>
-        <h3 class="text-muted pull-right">Docker Watcher</h3>
-    </div>
 
-    <div id="datalist" style="white-space: nowrap;"></div>
-    <script type="text/javascript">
+        th {
+            text-align: center;
+        }
+
+    </style>
+</head>
+<script type="text/javascript">
+    function info() {
         //var responseDiv = $('#response');
-        var url = '/cluster_info';
+        var url_cluster_info = '/cluster_info';
         $.ajax({
-            method: 'GET', url: url, success: function (data) {
-                var table = '<table class="table table-striped"><thead><th>Slave</th><th>Total CPU</th><th>Total Memory</th><th>Total Disk</th>' +
-                        '<th>Used CPU</th><th>UsedMemory</th><th>Used Disk</th></thead><tbody>';
+            method: 'GET', url: url_cluster_info, success: function (data) {
+                var table = '<table class="table table-striped"><thead><th>Slave</th>' +
+                        '<th>Total CPU</th><th>Total Memory</th>' +
+                        '<th>Total Disk</th>' + '<th>Used CPU</th>' +
+                        '<th>Used Memory</th><th>Used Disk</th></thead><tbody>';
                 var obj = $.parseJSON(data);
                 $.each(obj, function () {
                     table += '<tr><td>' + this['name'] + '</td>' +
                             '<td>' + this['total_cpus'] + '</td>' +
-                            '<td>' + this['total_memory'] + '</td>' +
-                            '<td>' + this['total_disk'] + '</td>' +
+                            '<td>' + this['total_memory'] + ' MB' + '</td>' +
+                            '<td>' + this['total_disk'] + ' MB' + '</td>' +
                             '<td>' + this['used_cpus'] + '</td>' +
-                            '<td>' + this['total_memory'] + '</td>' +
-                            '<td>' + this['used_disk'] + '</td></tr>';
+                            '<td>' + this['total_memory'] + ' MB' + '</td>' +
+                            '<td>' + this['used_disk'] + ' MB' + '</td></tr>';
                 });
                 table += '</tbody></table>';
-                document.getElementById("datalist").innerHTML = table;
+                document.getElementById("cluster_info").innerHTML = table;
             }
         });
-    </script>
-</div>
+        var url_pods_info = '/pods_info';
+        $.ajax({
+            method: 'GET', url: url_pods_info, success: function (data) {
+                var table = '<table class="table table-striped"><thead><th>Pod</th>' +
+                        '<th>Command</th>' + '<th>Image</th>' + '<th>CPU</th>' +
+                        '<th>Memory</th>' + '<th>Disk</th>' +
+                        '<th>Instances</th></thead><tbody>';
+                var obj = $.parseJSON(data);
+                $.each(obj, function () {
+                    table += '<tr><td>' + this['name'] + '</td>' +
+                            '<td>' + this['command'] + '</td>' +
+                            '<td>' + this['image'] + '</td>' +
+                            '<td>' + this['cpus'] + '</td>' +
+                            '<td>' + this['memory'] + ' MB' + '</td>' +
+                            '<td>' + this['disk'] + ' MB' + '</td>' +
+                            '<td>' + this['instances'] + '</td></tr>';
+                });
+                table += '</tbody></table>';
+                document.getElementById("pods_info").innerHTML = table;
+            }
+        });
+    }
 
+    $(function () {
+        info()
+        var timer = setInterval(info, 10000);
+    });
+</script>
+<body>
+<div class="container">
+    <div id="cluster_info" style="white-space: nowrap;"></div>
+    <div id="pods_info" style="white-space: nowrap;"></div>
+</div>
 </body>
 
 </html>

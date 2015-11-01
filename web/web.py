@@ -14,22 +14,31 @@ ch = logging.StreamHandler(sys.stdout)
 app = Flask(__name__)
 
 
+def yaml2json(yaml_str):
+    return json.dumps(yaml.safe_load(yaml_str))
+
+
 @app.route('/')
 def index():
     logging.warning('/')
     return render_template('index.html')
 
 
+@app.route('/pods_info')
+def pods_info():
+    logging.warning('/pods_info')
+    url = 'http://' + settings_web.master + '/pods_info'
+    req = requests.get(url)
+    res = yaml2json(req.text)
+    return res
+
+
 @app.route('/cluster_info')
 def cluster_info():
-    logging.warning('cluster_info')
+    logging.info('cluster_info')
     url = 'http://' + settings_web.master + '/cluster_info'
-    logging.warning(url)
     req = requests.get(url)
-    logging.warning(req.text)
-    logging.warning(yaml.safe_load(req.text))
-    res = json.dumps(yaml.safe_load(req.text))
-    logging.warning(res)
+    res = yaml2json(req.text)
     return res
 
 
