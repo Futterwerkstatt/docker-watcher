@@ -3,6 +3,7 @@
 import logging
 import sys
 import os
+
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from common import EtcdClient
 import yaml
@@ -14,127 +15,114 @@ import requests
 
 import settings_master
 
-logging.basicConfig(filename=settings_master.log, level=4,
+logging.basicConfig(filename=settings_master.log, level=30,
                     format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s', )
 ch = logging.StreamHandler(sys.stdout)
-logging.debug('starting master')
+logging.warning('starting master')
 
-etcd_client = EtcdClient.EtcdClient(settings_master.etcd_host, settings_master.etcd_port)
+etcd_client = EtcdClient.EtcdClient(settings_master.etcd_host, settings_master.etcd_port, settings_master.etcd_timeout)
 
 
 class DockerWatcherMaster:
     class AddPodHandler(tornado.web.RequestHandler):
         def post(self):
-            logging.debug('add pod')
+            '''add pod'''
+            logging.warning('add pod')
+            etcd_client.lock()
             req = self.request.body
             args = yaml.safe_load(req)
+            podname = args['name']
             # lock = etcd_client.lock('pods')
-            if args['name'] in etcd_client.ls('pods'):
-                self.write('pod already exists')
-                logging.debug('pod already exists, replacing')
-            etcd_client.set('pods/' + args['name'], str(args))
-            # etcd_client.unlock(lock)
+            if podname in etcd_client.ls('pods'):
+                self.write('pod already exists, replacing')
+                logging.warning('pod already exists, replacing')
+            etcd_client.set('pods/' + podname, str(args))
+            logging.warning('pod ' + podname + ' added')
+            etcd_client.unlock()
+            self.write('pod ' + podname + ' added')
             self.set_status(200)
 
     class AddSlaveHandler(tornado.web.RequestHandler):
         def post(self):
-            logging.debug('add slave')
+            '''add slave'''
+            logging.warning('add slave')
+            etcd_client.lock()
             slavename = self.request.body
-            logging.debug(str(etcd_client.ls('slaves/')))
+            logging.warning(str(etcd_client.ls('slaves/')))
             url = 'http://' + slavename + '/info'
             req = requests.get(url)
             slave_info = str(req.text)
             slave_config = yaml.safe_load(slave_info)
-            logging.debug(slave_config)
+            logging.warning(slave_config)
             slave_config['used_cpus'] = 0
             slave_config['used_memory'] = 0
             slave_config['used_disk'] = 0
+            slave_config['name'] = slavename
+            if slavename in etcd_client.ls('slaves'):
+                self.write('slave already exists, replacing')
+                logging.warning('slave already exists, replacing')
             etcd_client.set('slaves/' + slavename, yaml.safe_dump(slave_config))
+            etcd_client.unlock()
+            self.write('slave ' + slavename + ' added')
             self.set_status(200)
 
     # class KillHandler(tornado.web.RequestHandler):
     #    def get(self):
     class RunPodHandler(tornado.web.RequestHandler):
         def post(self):
-            logging.debug('run pod')
+            '''run pod'''
+            logging.warning('run pod')
+            etcd_client.lock()
             podname = self.request.body
-            pod_config = yaml.safe_load(etcd_client.get('pods/' + podname))
-            slaves_list = etcd_client.ls('slaves/')
-            instances_count = pod_config['instances']
-            running_pod = {}
-            running_pod['name'] = podname
-            running_pod['tasks'] = []
-            good_slaves = []
-            for slave in slaves_list:
-                slave_config = yaml.safe_load(etcd_client.get('slaves/' + slave))
-                free_cpus = int(slave_config['total_cpus']) \
-                            - int(slave_config['used_cpus'])
-                free_memory = int(slave_config['total_memory']) \
-                              - int(slave_config['used_memory'])
-                free_disk = int(slave_config['total_disk']) \
-                            - int(slave_config['used_disk'])
-
-                required_cpus = int(pod_config['cpus'])
-                required_memory = int(pod_config['memory'])
-                required_disk = int(pod_config['disk'])
-
-                if required_cpus <= free_cpus and required_memory <= free_memory and required_disk <= free_disk:
-                    good_slaves.append(slave)
-
-            if len(good_slaves) < instances_count:
-                logging.debug("don't have resources to run pod")
-                self.write("don't have resources to run pod")
+            if podname not in etcd_client.ls('pods/'):
+                logging.warning('pod ' + podname + ' not found')
                 self.set_status(500)
-            else:
-                for slave in good_slaves:
-                    #self.url = 'http://' + slave + '/run_pod'
-                    self.body = str(yaml.safe_dump(pod_config))
-                    slave_config = yaml.safe_load(etcd_client.get('slaves/' + slave))
-                    req = requests.post(self.url, data=self.body)
-                    used_cpus = int(slave_config['used_cpus']) + required_cpus
-                    used_memory = int(slave_config['used_memory']) + required_memory
-                    used_disk = int(slave_config['used_disk']) + required_disk
-                    slave_config['used_cpus'] = used_cpus
-                    slave_config['used_memory'] = used_memory
-                    slave_config['used_disk'] = used_disk
-                    etcd_client.set('slaves/' + slave, str(yaml.safe_dump(slave_config)))
-                    running_pod['tasks'].append({'slave': slave, 'id': req.text})
-                    instances_count -= 1
-                    if instances_count == 0:
-                        break
-                    etcd_client.set('running_pods/' + podname, running_pod)
-                    self.write(yaml.safe_dump(running_pod))
-                    self.set_status(200)
+                return 0
+            queue = yaml.safe_load(etcd_client.get('/queue'))
+            queue.append(podname)
+            etcd_client.set('/queue', yaml.safe_dump(queue))
+            logging.warning('pod ' + podname + ' queued to run')
+            etcd_client.unlock()
+            self.write('pod ' + podname + ' queued to run')
+            self.set_status(200)
 
     class SlaveInfoHandler(tornado.web.RequestHandler):
         def post(self):
-            logging.debug('slave_info')
+            '''slave info'''
+            logging.warning('slave_info')
+            etcd_client.lock()
             slavename = str(self.request.body)
             info = etcd_client.get('slaves/' + slavename)
+            etcd_client.unlock()
             self.write(info)
             self.set_status(200)
 
     class ClusterInfoHandler(tornado.web.RequestHandler):
         def get(self):
-            logging.debug('cluster_info')
+            '''get cluster info'''
+            logging.warning('cluster_info')
+            etcd_client.lock()
             slaves_list = etcd_client.ls('slaves/')
-            info = {}
+            info = []
             for slave in slaves_list:
                 slave_config = yaml.safe_load(etcd_client.get('slaves/' + slave))
-                info[slave] = slave_config
+                info.append(slave_config)
+            etcd_client.unlock()
             self.write(yaml.safe_dump(info))
             self.set_status(200)
 
     class StopMasterHandler(tornado.web.RequestHandler):
         def get(self):
-            logging.debug('/stop_master')
+            '''stop master'''
+            logging.warning('/stop_master')
             self.write('stopping master\n')
             self.set_status(200)
             tornado.ioloop.IOLoop.instance().stop()
 
     class StopSlaveHandler(tornado.web.RequestHandler):
         def post(self):
-            logging.debug('/stop_slave')
+            '''stop slave'''
+            logging.warning('/stop_slave')
             slave = self.request.body
             url = 'http://' + slave + '/stop'
             req = requests.get(url)
@@ -143,7 +131,8 @@ class DockerWatcherMaster:
 
     class PodsInfoHandler(tornado.web.RequestHandler):
         def get(self):
-            logging.debug('/pods_info')
+            '''get pods info'''
+            logging.warning('/pods_info')
             info = []
             slaves_list = etcd_client.ls('slaves/')
             for slave in slaves_list:
@@ -154,6 +143,7 @@ class DockerWatcherMaster:
             self.set_status(200)
 
     def run(self):
+        '''run tornado app'''
         self.tornadoapp = tornado.web.Application([
             (r'/slave_info', DockerWatcherMaster.SlaveInfoHandler),
             (r'/add_pod', DockerWatcherMaster.AddPodHandler),

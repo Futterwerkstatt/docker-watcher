@@ -3,66 +3,60 @@
 
 <head>
     <title>Docker Watcher</title>
-
-
     <link href="http://getbootstrap.com/dist/css/bootstrap.min.css" rel="stylesheet">
-
     <link href="http://getbootstrap.com/examples/jumbotron-narrow/jumbotron-narrow.css" rel="stylesheet">
-
-
+    <script src="//code.jquery.com/jquery-1.11.3.min.js"></script>
 </head>
 
 <body>
+<div class="container">
+    <style>
+        table {
+            margin: 0 auto;
+        }
 
-    <div class="container">
-        <div class="header">
-            <nav>
-                <ul class="nav nav-pills pull-left">
-                    <li role="presentation" class="active"><a href="#">nodes</a>
-                    </li>
-                    <li role="presentation" class="active"><a href="#">pods</a>
-                    </li>
-                </ul>
-            </nav>
-            <h3 class="text-muted pull-right">Docker Watcher</h3>
-        </div>
-
-        <div class="jumbotron">
-            <h1>Bucket List App</h1>
-            <p class="lead"></p>
-            <p><a class="btn btn-lg btn-success" href="showSignUp" role="button">Sign up today</a>
-            </p>
-        </div>
-
-        <div class="row marketing">
-            <div class="col-lg-6">
-                <h4>Bucket List</h4>
-                <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-                <h4>Bucket List</h4>
-                <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-                <h4>Bucket List</h4>
-                <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
-            </div>
-
-            <div class="col-lg-6">
-                <h4>Bucket List</h4>
-                <p>Donec id elit non mi porta gravida at eget metus. Maecenas faucibus mollis interdum.</p>
-
-                <h4>Bucket List</h4>
-                <p>Morbi leo risus, porta ac consectetur ac, vestibulum at eros. Cras mattis consectetur purus sit amet fermentum.</p>
-
-                <h4>Bucket List</h4>
-                <p>Maecenas sed diam eget risus varius blandit sit amet non magna.</p>
-            </div>
-        </div>
-
-        <footer class="footer">
-            <p>&copy; Company 2015</p>
-        </footer>
-
+        td {
+            text-align: center;
+            vertical-align: middle;
+        }
+    </style>
+    <div class="header">
+        <nav>
+            <ul class="nav nav-pills pull-left">
+                <li role="presentation" class="active"><a href="#">nodes</a>
+                </li>
+                <li role="presentation" class="active"><a href="#">pods</a>
+                </li>
+            </ul>
+        </nav>
+        <h3 class="text-muted pull-right">Docker Watcher</h3>
     </div>
+
+    <div id="datalist" style="white-space: nowrap;"></div>
+    <script type="text/javascript">
+        //var responseDiv = $('#response');
+        var url = '/cluster_info';
+        $.ajax({
+            method: 'GET', url: url, success: function (data) {
+                var table = '<table class="table table-striped"><thead><th>Slave</th><th>Total CPU</th><th>Total Memory</th><th>Total Disk</th>' +
+                        '<th>Used CPU</th><th>UsedMemory</th><th>Used Disk</th></thead><tbody>';
+                var obj = $.parseJSON(data);
+                $.each(obj, function () {
+                    table += '<tr><td>' + this['name'] + '</td>' +
+                            '<td>' + this['total_cpus'] + '</td>' +
+                            '<td>' + this['total_memory'] + '</td>' +
+                            '<td>' + this['total_disk'] + '</td>' +
+                            '<td>' + this['used_cpus'] + '</td>' +
+                            '<td>' + this['total_memory'] + '</td>' +
+                            '<td>' + this['used_disk'] + '</td></tr>';
+                });
+                table += '</tbody></table>';
+                document.getElementById("datalist").innerHTML = table;
+            }
+        });
+    </script>
+</div>
+
 </body>
 
 </html>

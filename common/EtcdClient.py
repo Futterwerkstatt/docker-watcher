@@ -1,9 +1,11 @@
 import etcd
 import logging
-
+import time
+import random
 
 class EtcdClient:
-    def __init__(self, host='localhost', port=4001):
+    def __init__(self, host='localhost', port=4001, timeout=30):
+        self.timeout = timeout
         self.etcd_client = etcd.client.Client(host=host, port=port)
 
     def set(self, key, value):
@@ -15,24 +17,22 @@ class EtcdClient:
         logging.debug(key_str)
         return self.etcd_client.get(key_str).value
 
-    def lock(self, key):
-        key_str = '/docker-watcher/' + key
+    def lock(self):
+        lock_str = '/docker-watcher/lock'
+        ts_now = int(time.time())
+        ts_lock = int(self.etcd_client.get(lock_str).value)
         i = 0
-        lock = self.etcd_client.get_lock(key_str, ttl=60)
-        while (i < 60):
-            lock.acquire()
-            if (lock.is_locked()):
-                logging.debug(key_str + ' locked')
-                return lock
-            else:
-                time.sleep(1)
-        logging.debug('unable to get lock on ' + key_str)
-        return 1
+        while i < self.timeout:
+            if ts_now - ts_lock >= self.timeout:
+                self.etcd_client.set(lock_str, str(ts_now))
+                break
+            time.sleep(random.randint(100, 1000) / 1000)
+            i += 1
+        return ts_now
 
-    def unlock(self, lock):
-        logging.debug('unlock ' + lock)
-        lock.release()
-        return 0
+    def unlock(self):
+        lock_str = '/docker-watcher/lock'
+        self.etcd_client.set(lock_str, '0')
 
     def ls(self, key):
         ret = []
