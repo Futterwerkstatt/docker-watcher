@@ -29,13 +29,15 @@ class DockerWatcherMaster:
             '''add pod'''
             logging.warning('add pod')
             etcd_client.lock()
-            req = self.request.body
-            args = yaml.safe_load(req)
+            pod = self.request.body
+            args = yaml.safe_load(pod)
             podname = args['name']
             # lock = etcd_client.lock('pods')
             if podname in etcd_client.ls('pods'):
                 self.write('pod already exists, replacing')
                 logging.warning('pod already exists, replacing')
+            args['enabled'] = 0
+            args['containers'] = [{}]
             etcd_client.set('pods/' + podname, str(args))
             logging.warning('pod ' + podname + ' added')
             etcd_client.unlock()
@@ -78,9 +80,10 @@ class DockerWatcherMaster:
                 logging.warning('pod ' + podname + ' not found')
                 self.set_status(500)
                 return 0
-            queue = yaml.safe_load(etcd_client.get('/queue'))
-            queue.append(podname)
-            etcd_client.set('/queue', yaml.safe_dump(queue))
+            pod = etcd_client.get('pods/' + podname)
+            pod_dict = yaml.safe_load(pod)
+            pod_dict['enabled'] = 1
+            etcd_client.set('pods/' + podname, str(yaml.safe_dump(pod_dict)))
             logging.warning('pod ' + podname + ' queued to run')
             etcd_client.unlock()
             self.write('pod ' + podname + ' queued to run')
@@ -132,22 +135,24 @@ class DockerWatcherMaster:
     class ContainersInfoHandler(tornado.web.RequestHandler):
         def get(self):
             '''get containers info'''
-            logging.warning('/containers_info')
+            logging.info('/containers_info')
             etcd_client.lock()
             info = []
             slaves_list = etcd_client.ls('slaves/')
+            etcd_client.unlock()
             for slave in slaves_list:
                 url = 'http://' + slave + '/get_containers'
                 req = requests.get(url)
-                info.append(req.text)
-            etcd_client.unlock()
-            self.write(yaml.safe_load(info))
+                for container in yaml.safe_load(req.text):
+                    container['slave_name'] = slave
+                    info.append(container)
+            self.write(str(yaml.safe_dump(info)))
             self.set_status(200)
 
     class PodsInfoHandler(tornado.web.RequestHandler):
         def get(self):
             ''' get pods info '''
-            logging.warning('/pods_info')
+            logging.info('/pods_info')
             etcd_client.lock()
             pods_info = []
             pods = etcd_client.ls('pods/')

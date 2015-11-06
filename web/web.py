@@ -26,7 +26,7 @@ def index():
 
 @app.route('/pods_info')
 def pods_info():
-    logging.warning('/pods_info')
+    logging.info('/pods_info')
     url = 'http://' + settings_web.master + '/pods_info'
     req = requests.get(url)
     res = yaml2json(req.text)
@@ -37,6 +37,33 @@ def pods_info():
 def cluster_info():
     logging.info('cluster_info')
     url = 'http://' + settings_web.master + '/cluster_info'
+    req = requests.get(url)
+    res = yaml2json(req.text)
+    return res
+
+
+@app.route('/total_cluster_info')
+def total_cluster_info():
+    logging.info('total_cluster_info')
+    url = 'http://' + settings_web.master + '/cluster_info'
+    req = requests.get(url)
+    req_list = yaml.safe_load(req.text)
+    info = {'total_cpu': 0, 'total_memory': 0, 'total_disk': 0, 'total_used_cpu': 0,
+            'total_used_memory': 0, 'total_used_disk': 0}
+    for d in req_list:
+        info['total_cpu'] += int(d['total_cpus'])
+        info['total_memory'] += int(d['total_memory'])
+        info['total_disk'] += int(d['total_disk'])
+        info['total_used_cpu'] += int(d['used_cpus'])
+        info['total_used_memory'] += int(d['used_memory'])
+        info['total_used_disk'] += int(d['used_disk'])
+    return json.dumps(info)
+
+
+@app.route('/containers_info')
+def containers_info():
+    logging.info('containers_info')
+    url = 'http://' + settings_web.master + '/containers_info'
     req = requests.get(url)
     res = yaml2json(req.text)
     return res

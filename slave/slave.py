@@ -76,7 +76,8 @@ class DockerWatcherSlave:
     class GetContainersHandler(tornado.web.RequestHandler):
         def get(self):
             logging.warning('/get_containers')
-            response = str(docker_client.containers(all=True))
+            containers_list = docker_client.containers()
+            response = str(yaml.safe_dump(containers_list))
             self.write(response)
             self.set_status(200)
 

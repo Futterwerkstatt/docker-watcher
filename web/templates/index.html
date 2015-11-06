@@ -67,6 +67,45 @@
                 document.getElementById("pods_info").innerHTML = table;
             }
         });
+        var url_total_cluster_info = '/total_cluster_info';
+        $.ajax({
+            method: 'GET', url: url_total_cluster_info, success: function (data) {
+                var table = '<table class="table table-striped"><thead><th>Total CPU</th>' +
+                        '<th>Total Memory</th>' + '<th>Total Disk</th>' + '<th>Used CPU</th>' +
+                        '<th>Used Memory</th>' + '<th>Used Disk</th></thead><tbody>';
+                var obj = $.parseJSON(data);
+                table += '<tr><td>' + obj['total_cpu'] + '</td>' +
+                            '<td>' + obj['total_memory'] + ' MB</td>' +
+                            '<td>' + obj['total_disk'] + ' MB </td>' +
+                            '<td>' + obj['total_used_cpu'] + '</td>' +
+                            '<td>' + obj['total_used_memory'] + ' MB' + '</td>' +
+                            '<td>' + obj['total_used_disk'] + ' MB' + '</td></tr>';
+
+                table += '</tbody></table>';
+                document.getElementById("total_cluster_info").innerHTML = table;
+            }
+        });
+        var url_containers_info = '/containers_info';
+        $.ajax({
+            method: 'GET', url: url_containers_info, success: function (data) {
+                var table = '<table class="table table-striped"><thead><th>Slave</th>' +
+                        '<th>Command</th>' + '<th>Image</th>' + '<th>CPU</th>' +
+                        '<th>Memory</th>' + '<th>Disk</th>' +
+                        '<th>Instances</th></thead><tbody>';
+                var obj = $.parseJSON(data);
+                $.each(obj, function () {
+                    table += '<tr><td>' + this['slave_name'] + '</td>' +
+                            '<td>' + this['command'] + '</td>' +
+                            '<td>' + this['image'] + '</td>' +
+                            '<td>' + this['cpus'] + '</td>' +
+                            '<td>' + this['memory'] + ' MB' + '</td>' +
+                            '<td>' + this['disk'] + ' MB' + '</td>' +
+                            '<td>' + this['instances'] + '</td></tr>';
+                });
+                table += '</tbody></table>';
+                document.getElementById("containers_info").innerHTML = table;
+            }
+        });
     }
 
     $(function () {
@@ -77,7 +116,9 @@
 <body>
 <div class="container">
     <div id="cluster_info" style="white-space: nowrap;"></div>
+    <div id="total_cluster_info" style="white-space: nowrap;"></div>
     <div id="pods_info" style="white-space: nowrap;"></div>
+    <div id="containers_info" style="white-space: nowrap;"></div>
 </div>
 </body>
 
