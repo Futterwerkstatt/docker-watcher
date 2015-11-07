@@ -37,7 +37,7 @@ class DockerWatcherMaster:
                 self.write('pod already exists, replacing')
                 logging.warning('pod already exists, replacing')
             args['enabled'] = 0
-            args['containers'] = [{}]
+            args['containers'] = []
             etcd_client.set('pods/' + podname, str(args))
             logging.warning('pod ' + podname + ' added')
             etcd_client.unlock()
@@ -136,10 +136,8 @@ class DockerWatcherMaster:
         def get(self):
             '''get containers info'''
             logging.info('/containers_info')
-            etcd_client.lock()
             info = []
             slaves_list = etcd_client.ls('slaves/')
-            etcd_client.unlock()
             for slave in slaves_list:
                 url = 'http://' + slave + '/get_containers'
                 req = requests.get(url)
@@ -153,13 +151,11 @@ class DockerWatcherMaster:
         def get(self):
             ''' get pods info '''
             logging.info('/pods_info')
-            etcd_client.lock()
             pods_info = []
             pods = etcd_client.ls('pods/')
             for pod in pods:
                 pod_info = yaml.safe_load(etcd_client.get('pods/' + pod))
                 pods_info.append(pod_info)
-            etcd_client.unlock()
             self.write(yaml.safe_dump(pods_info))
             self.set_status(200)
 

@@ -4,6 +4,7 @@ import requests
 import sys
 import os
 import yaml
+import ipdb
 
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from common import EtcdClient
@@ -43,14 +44,14 @@ class DockerWatcher:
             logging.warning('checking pod ' + pod)
             pod_config = yaml.safe_load(etcd_client.get('pods/' + pod))
             running_containers = pod_config['containers']
-            if pod_config['enabled'] == '1':
-                running_instances = int(len(pod_config['instances']))
-                if len(running_containers) < running_instances:
-                    containers_to_run = running_instances - len(running_containers)
+            if pod_config['enabled'] == 1:
+                instances = pod_config['instances']
+                if len(running_containers) < instances:
+                    containers_to_run = instances - len(running_containers)
                     for slave in slaves:
                         if containers_to_run == 0:
                             break
-                        slave_cfg = etcd_client.get('slaves/' + slave)
+                        slave_cfg = yaml.safe_load(etcd_client.get('slaves/' + slave))
                         if not any(d.get('slave', None) == slave for d in running_containers):
                             slave_free_cpus = int(slave_cfg['total_cpus']) - int(slave_cfg['used_cpus'])
                             slave_free_memory = int(slave_cfg['total_memory']) - int(slave_cfg['used_memory'])
@@ -60,7 +61,7 @@ class DockerWatcher:
                             pod_required_disk = pod_config['disk']
                             if pod_required_cpus <= slave_free_cpus and pod_required_memory <= slave_free_memory \
                                     and pod_required_disk <= slave_free_disk:
-                                container_id = DockerWatcher.run_pod_on_slave(pod, slave)
+                                container_id = DockerWatcher.run_pod_on_slave(self, pod, slave)
                                 slave_cfg['used_cpus'] += pod_required_cpus
                                 slave_cfg['used_memory'] += pod_required_memory
                                 slave_cfg['used_disk'] += pod_required_disk
@@ -68,18 +69,22 @@ class DockerWatcher:
                                 containers_to_run -= 1
                                 running_containers.append({'slave': slave, 'id': container_id})
                                 logging.debug('run pod ' + pod + ' on ' + slave + ' container ' + container_id)
-                    if containers_to_run == 0:
-                        logging.warning('all containers of pod ' + pod + ' running')
+                        if containers_to_run == 0:
+                            logging.warning('all containers of pod ' + pod + ' running')
             pod_config['containers'] = running_containers
             etcd_client.set('pods/' + pod, pod_config)
         logging.warning('run_pods finished')
 
+
     def check_pods(self):
         logging.warning('check_pods')
-        # slaves_list = etcd_client.ls('slaves/')
-        # queue = yaml.safe_load(etcd_client.get('queue'))
-        # pods_list = etcd_client.ls('pods/')
-        # current_running_pods_list = []
+        slaves_list = etcd_client.ls('slaves/')
+        pods_list = etcd_client.ls('pods/')
+        current_running_pods_list = []
+        for pod in pods_list:
+            if pod['enabled'] == 1:
+                current_running_pods_list.append(pod)
+
         # TODO
         # for slave in slaves_list:
         #    current_running_pods_list.append(self.get_pods_running_on_slave(slave))
@@ -100,7 +105,7 @@ class DockerWatcher:
         while True:
             etcd_client.lock()
             self.run_pods()
-            # self.check_pods()
+            self.check_pods()
             etcd_client.unlock()
             logging.warning('sleeping for ' + str(settings_watcher.sleep) + ' seconds')
             time.sleep(settings_watcher.sleep)
