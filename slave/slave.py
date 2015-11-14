@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import logging
 import sys
-
 import tornado.ioloop
 import tornado.web
 import tornado.httputil
@@ -9,21 +8,15 @@ import tornado.escape
 import yaml
 import psutil
 import docker
-
 import settings_slave
 
 logging.basicConfig(filename=settings_slave.log, level=30,
-                    format = u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s',)
+                    format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s', )
 ch = logging.StreamHandler(sys.stdout)
-docker_client = docker.Client()
+docker_client = docker.Client(base_url=settings_slave.docker_url)
 
 
 class DockerWatcherSlave:
-
-
-    def __init__(self):
-        self.docker_client = docker.Client(base_url=settings_slave.docker_url)
-
     class InfoHandler(tornado.web.RequestHandler):
         def return_mb(self, value):
             return int(value / float(2 ** 20))
@@ -34,7 +27,7 @@ class DockerWatcherSlave:
             info_dict['total_cpus'] = psutil.cpu_count()
             info_dict['total_memory'] = self.return_mb(psutil.virtual_memory().total)
             info_dict['total_disk'] = self.return_mb(psutil.disk_usage('/').total)
-            #info_dict['total_network'] = psutil.net_if_stats()['eth0'].speed
+            # info_dict['total_network'] = psutil.net_if_stats()['eth0'].speed
             self.write(yaml.dump(info_dict))
             self.set_status(200)
 
@@ -49,9 +42,9 @@ class DockerWatcherSlave:
         def post(self):
             logging.warning('/run_pod')
             data = yaml.safe_load(self.request.body)
-            logging.warning(data)
             image = data['image']
             command = data['command']
+            pod_name = data['name']
             memory = data['memory']
             logging.warning('pull ' + image)
             docker_client.pull(image)
@@ -62,6 +55,7 @@ class DockerWatcherSlave:
             start_response = docker_client \
                 .start(container=self.container.get('Id'))
             self.write(self.container.get('Id'))
+            logging.warning('running pod ' + pod_name + ' id: ' + self.container.get('Id'))
             self.set_status(200)
 
     class KillHandler(tornado.web.RequestHandler):
@@ -77,10 +71,10 @@ class DockerWatcherSlave:
         def get(self):
             logging.info('/get_containers')
             containers_list = docker_client.containers()
+            #logging.warning(containers_list)
             response = str(yaml.safe_dump(containers_list))
             self.write(response)
             self.set_status(200)
-
 
     def run(self):
         self.tornadoapp = tornado.web.Application([

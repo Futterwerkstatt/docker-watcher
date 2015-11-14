@@ -75,37 +75,36 @@
                         '<th>Used Memory</th>' + '<th>Used Disk</th></thead><tbody>';
                 var obj = $.parseJSON(data);
                 table += '<tr><td>' + obj['total_cpu'] + '</td>' +
-                            '<td>' + obj['total_memory'] + ' MB</td>' +
-                            '<td>' + obj['total_disk'] + ' MB </td>' +
-                            '<td>' + obj['total_used_cpu'] + '</td>' +
-                            '<td>' + obj['total_used_memory'] + ' MB' + '</td>' +
-                            '<td>' + obj['total_used_disk'] + ' MB' + '</td></tr>';
+                        '<td>' + obj['total_memory'] + ' MB</td>' +
+                        '<td>' + obj['total_disk'] + ' MB </td>' +
+                        '<td>' + obj['total_used_cpu'] + '</td>' +
+                        '<td>' + obj['total_used_memory'] + ' MB' + '</td>' +
+                        '<td>' + obj['total_used_disk'] + ' MB' + '</td></tr>';
 
                 table += '</tbody></table>';
                 document.getElementById("total_cluster_info").innerHTML = table;
             }
         });
-        /*var url_containers_info = '/containers_info';
+        var url_containers_info = '/containers_info';
         $.ajax({
             method: 'GET', url: url_containers_info, success: function (data) {
                 var table = '<table class="table table-striped"><thead><th>Slave</th>' +
-                        '<th>Command</th>' + '<th>Image</th>' + '<th>CPU</th>' +
-                        '<th>Memory</th>' + '<th>Disk</th>' +
-                        '<th>Instances</th></thead><tbody>';
+                        '<th>Command</th>' + '<th>Image</th>' + '<th>Status</th>' +
+                        '</thead><tbody>';
                 var obj = $.parseJSON(data);
                 $.each(obj, function () {
                     table += '<tr><td>' + this['slave_name'] + '</td>' +
-                            '<td>' + this['command'] + '</td>' +
-                            '<td>' + this['image'] + '</td>' +
-                            '<td>' + this['cpus'] + '</td>' +
-                            '<td>' + this['memory'] + ' MB' + '</td>' +
-                            '<td>' + this['disk'] + ' MB' + '</td>' +
-                            '<td>' + this['instances'] + '</td></tr>';
+                            '<td>' + this['Command'] + '</td>' +
+                            '<td>' + this['Image'] + '</td>' +
+                            '<td>' + this['Status'] + '</td>'
+                                /*'<td>' + this['memory'] + ' MB' + '</td>' +
+                                 '<td>' + this['disk'] + ' MB' + '</td>' +
+                                 '<td>' + this['instances']*/ + '</td></tr>';
                 });
                 table += '</tbody></table>';
                 document.getElementById("containers_info").innerHTML = table;
             }
-        });*/
+        });
     }
 
     $(function () {

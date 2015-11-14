@@ -20,6 +20,7 @@ etcd_client = EtcdClient.EtcdClient(settings_watcher.etcd_host, settings_watcher
 
 
 class DockerWatcher:
+
     def get_pods_running_on_slave(self, slavename):
         url = 'http://' + slavename + '/get_pods'
         req = requests.get(url)
@@ -92,9 +93,7 @@ class DockerWatcher:
         for pod in pods:  # get all pods containers
             pod_containers = yaml.safe_load(etcd_client.get('pods/' + pod))['containers']
             for d in pod_containers:  # loop through slave running containers
-                slave = d['slave']
-                container_id = d['id']
-                pods_containers.append({'pod': pod, 'slave': slave, 'id': container_id})
+                pods_containers.append({'pod': pod, 'slave': d['slave'], 'id': d['id']})
 
         for pod_container in pods_containers:  # remove not running containers from pod_cfg
             container_running = False
@@ -102,6 +101,7 @@ class DockerWatcher:
                 if pod_container['id'] == slave_container['Id']:
                     container_running = True
                     break
+
             if not container_running:
                 pod_cfg = yaml.safe_load(etcd_client.get('pods/' + pod))
                 pod_cfg['containers'].remove({'id': pod_container['id'], 'slave': pod_container['slave']})
@@ -119,6 +119,9 @@ class DockerWatcher:
         while True:
             etcd_client.lock()
             self.run_pods()
+            etcd_client.unlock()
+            time.sleep(settings_watcher.sleep)
+            etcd_client.lock()
             self.check_pods()
             etcd_client.unlock()
             logging.warning('sleeping for ' + str(settings_watcher.sleep) + ' seconds')

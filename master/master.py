@@ -50,12 +50,10 @@ class DockerWatcherMaster:
             logging.warning('add slave')
             etcd_client.lock()
             slavename = self.request.body
-            logging.warning(str(etcd_client.ls('slaves/')))
             url = 'http://' + slavename + '/info'
             req = requests.get(url)
             slave_info = str(req.text)
             slave_config = yaml.safe_load(slave_info)
-            logging.warning(slave_config)
             slave_config['used_cpus'] = 0
             slave_config['used_memory'] = 0
             slave_config['used_disk'] = 0
@@ -141,10 +139,12 @@ class DockerWatcherMaster:
             for slave in slaves_list:
                 url = 'http://' + slave + '/get_containers'
                 req = requests.get(url)
+                logging.warning(req.text)
                 for container in yaml.safe_load(req.text):
                     container['slave_name'] = slave
                     info.append(container)
-            self.write(str(yaml.safe_dump(info)))
+            logging.warning(info)
+            self.write(yaml.safe_dump(info))
             self.set_status(200)
 
     class PodsInfoHandler(tornado.web.RequestHandler):
