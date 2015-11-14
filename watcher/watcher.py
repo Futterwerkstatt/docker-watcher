@@ -33,15 +33,16 @@ class DockerWatcher:
             logging.warning('pod ' + pod + ' run on ' + slave + ' failed: ' + req.text)
             return 0
         else:
-            logging.warning('pod ' + pod + ' runned on ' + slave + ' id: ' + req.text)
+            logging.warning('pod ' + pod + ' running on ' + slave + ' id: ' + req.text)
         return req.text
 
     def run_pods(self):
         logging.warning('run_pods')
         pods = etcd_client.ls('pods/')
+        logging.warning('pods: ' + str(pods))
         slaves = etcd_client.ls('slaves/')
         for pod in pods:
-            logging.warning('checking pod ' + pod)
+            logging.warning('running pod ' + pod)
             pod_config = yaml.safe_load(etcd_client.get('pods/' + pod))
             running_containers = pod_config['containers']
             if pod_config['enabled'] == 1:
@@ -75,31 +76,44 @@ class DockerWatcher:
             etcd_client.set('pods/' + pod, pod_config)
         logging.warning('run_pods finished')
 
-
     def check_pods(self):
         logging.warning('check_pods')
-        slaves_list = etcd_client.ls('slaves/')
-        pods_list = etcd_client.ls('pods/')
-        current_running_pods_list = []
-        for pod in pods_list:
-            if pod['enabled'] == 1:
-                current_running_pods_list.append(pod)
+        pods = etcd_client.ls('pods/')
+        slaves = etcd_client.ls('slaves/')
+        slaves_containers = []  # all running containers on all slaves
+        pods_containers = []  # all pods containers
 
-        # TODO
-        # for slave in slaves_list:
-        #    current_running_pods_list.append(self.get_pods_running_on_slave(slave))
+        for slave in slaves:  # get all running containers
+            url = 'http://' + slave + '/get_containers'
+            slave_containers = yaml.safe_load(requests.get(url).text)
+            for container in slave_containers:
+                slaves_containers.append(container)
 
-        # for q in queue:
-        #    for slave, pod in q.iteritems():
-        #        url = 'http://' + slave + '/run_pod'
-        #        data = etcd_client.get('pods/' + pod)
-        #        req = requests.post(url, data=data)
-        #        if req.status_code == 200:
-        #            logging.warning('run pod ' + pod + ' on slave ' + slave + ' id: ' + req.text)
-        #            queue.remove({slave: pod})
-        #        else:
-        #            logging.warning('failed to run pod ' + pod + 'on slave ' + slave)
-        # etcd_client.set('queue', queue)
+        for pod in pods:  # get all pods containers
+            pod_containers = yaml.safe_load(etcd_client.get('pods/' + pod))['containers']
+            for d in pod_containers:  # loop through slave running containers
+                slave = d['slave']
+                container_id = d['id']
+                pods_containers.append({'pod': pod, 'slave': slave, 'id': container_id})
+
+        for pod_container in pods_containers:  # remove not running containers from pod_cfg
+            container_running = False
+            for slave_container in slaves_containers:
+                if pod_container['id'] == slave_container['Id']:
+                    container_running = True
+                    break
+            if not container_running:
+                pod_cfg = yaml.safe_load(etcd_client.get('pods/' + pod))
+                pod_cfg['containers'].remove({'id': pod_container['id'], 'slave': pod_container['slave']})
+                etcd_client.set('pods/' + pod, yaml.safe_dump(pod_cfg))
+                slave_cfg = yaml.safe_load(etcd_client.get('slaves/' + pod_container['slave']))
+                slave_cfg['used_cpus'] = int(slave_cfg['used_cpus']) - int(pod_cfg['cpus'])
+                slave_cfg['used_memory'] = int(slave_cfg['used_memory']) - int(pod_cfg['memory'])
+                slave_cfg['used_disk'] = int(slave_cfg['used_disk']) - int(pod_cfg['disk'])
+                etcd_client.set('slaves/' + pod_container['slave'], yaml.safe_dump(slave_cfg))
+                logging.warning('pod ' + pod + ' container ' + pod_container['id'] +
+                                ' not running, scheduling to run')
+        logging.warning('check_pods finished')
 
     def run(self):
         while True:
@@ -112,6 +126,10 @@ class DockerWatcher:
 
 
 if __name__ == '__main__':
-    logging.warning('starting watcher')
-    docker_watcher = DockerWatcher()
-    docker_watcher.run()
+    try:
+        logging.warning('starting watcher')
+        docker_watcher = DockerWatcher()
+        docker_watcher.run()
+    except Exception, e:
+        logging.error(e, exc_info=True)
+        exit(1)

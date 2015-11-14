@@ -85,7 +85,7 @@
                 document.getElementById("total_cluster_info").innerHTML = table;
             }
         });
-        var url_containers_info = '/containers_info';
+        /*var url_containers_info = '/containers_info';
         $.ajax({
             method: 'GET', url: url_containers_info, success: function (data) {
                 var table = '<table class="table table-striped"><thead><th>Slave</th>' +
@@ -105,12 +105,12 @@
                 table += '</tbody></table>';
                 document.getElementById("containers_info").innerHTML = table;
             }
-        });
+        });*/
     }
 
     $(function () {
         info()
-        var timer = setInterval(info, 10000);
+        var timer = setInterval(info, 2000);
     });
 </script>
 <body>

@@ -179,5 +179,9 @@ class DockerWatcherMaster:
 
 
 if __name__ == '__main__':
-    docker_watcher = DockerWatcherMaster()
-    docker_watcher.run()
+    try:
+        docker_watcher = DockerWatcherMaster()
+        docker_watcher.run()
+    except Exception, e:
+        logging.error(e, exc_info=True)
+        exit(1)

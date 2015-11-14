@@ -75,7 +75,7 @@ class DockerWatcherSlave:
 
     class GetContainersHandler(tornado.web.RequestHandler):
         def get(self):
-            logging.warning('/get_containers')
+            logging.info('/get_containers')
             containers_list = docker_client.containers()
             response = str(yaml.safe_dump(containers_list))
             self.write(response)
@@ -96,7 +96,10 @@ class DockerWatcherSlave:
 
 
 if __name__ == '__main__':
-    logging.warning('starting slave')
-    docker_watcher = DockerWatcherSlave()
-    docker_watcher.run()
-    exit(0)
+    try:
+        logging.warning('starting slave')
+        docker_watcher = DockerWatcherSlave()
+        docker_watcher.run()
+    except Exception, e:
+        logging.error(e, exc_info=True)
+        exit(1)
