@@ -54,10 +54,11 @@ class DockerWatcherSlave:
             logging.warning('create_container')
             self.container = docker_client.create_container(
                 image=image, command=command)
+            container_id = self.container.get('Id')
             logging.warning('start_container')
             start_response = docker_client \
-                .start(container=self.container.get('Id'))
-            self.write(self.container.get('Id'))
+                .start(container=container_id)
+            self.write(container_id)
             logging.warning('running pod ' + pod_name + ' id: ' + self.container.get('Id'))
             self.set_status(200)
 

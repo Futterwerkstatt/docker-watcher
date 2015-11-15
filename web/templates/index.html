@@ -72,14 +72,16 @@
             method: 'GET', url: url_total_cluster_info, success: function (data) {
                 var table = '<table class="table table-striped"><thead><th>Total CPU</th>' +
                         '<th>Total Memory</th>' + '<th>Total Disk</th>' + '<th>Used CPU</th>' +
-                        '<th>Used Memory</th>' + '<th>Used Disk</th>' + '</thead><tbody>';
+                        '<th>Used Memory</th>' + '<th>Used Disk</th>' +
+                        '<th>Running Instances</th>' + '</thead><tbody>';
                 var obj = $.parseJSON(data);
                 table += '<tr><td>' + obj['total_cpu'] + '</td>' +
                         '<td>' + obj['total_memory'] + ' MB</td>' +
                         '<td>' + obj['total_disk'] + ' MB </td>' +
                         '<td>' + obj['total_used_cpu'] + '</td>' +
                         '<td>' + obj['total_used_memory'] + ' MB' + '</td>' +
-                        '<td>' + obj['total_used_disk'] + ' MB' + '</td></tr>';
+                        '<td>' + obj['total_used_disk'] + ' MB' +
+                        '<td>' + obj['running_instances'] + '</td></tr>';
 
                 table += '</tbody></table>';
                 document.getElementById("total_cluster_info").innerHTML = table;

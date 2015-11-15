@@ -140,11 +140,9 @@ class DockerWatcherMaster:
             for slave in slaves_list:
                 url = 'http://' + slave + '/get_containers'
                 req = requests.get(url)
-                logging.warning(req.text)
                 for container in yaml.safe_load(req.text):
                     container['slave_name'] = slave
                     info.append(container)
-            logging.warning(info)
             self.write(yaml.safe_dump(info))
             self.set_status(200)
 

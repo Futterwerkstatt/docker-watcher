@@ -3,5 +3,5 @@ image: busybox:latest
 command: /bin/sleep 120
 cpus: 1
 memory: 256
-disk: 2048
-instances: 3
+disk: 1024
+instances: 4

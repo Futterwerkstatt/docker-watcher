@@ -21,21 +21,23 @@ class EtcdClient:
         return value
 
     def lock(self):
-        lock_str = '/docker-watcher/lock'
-        ts_now = int(time.time())
-        ts_lock = int(self.etcd_client.get(lock_str).value)
-        i = 0
-        while i < self.timeout:
-            if ts_now - ts_lock >= self.timeout:
-                self.etcd_client.set(lock_str, str(ts_now))
-                break
-            time.sleep(random.randint(100, 1000) / 1000)
-            i += 1
-        return ts_now
+        #lock_str = '/docker-watcher/lock'
+        #ts_now = int(time.time())
+        #ts_lock = int(self.etcd_client.get(lock_str).value)
+        #i = 0
+        #while i < self.timeout:
+        #    if ts_now - ts_lock >= self.timeout:
+        #        self.etcd_client.set(lock_str, str(ts_now))
+        #        break
+        #    time.sleep(random.randint(100, 1000) / 1000)
+        #    i += 1
+        #return ts_now
+        return True
 
     def unlock(self):
-        lock_str = '/docker-watcher/lock'
-        self.etcd_client.set(lock_str, '0')
+        #lock_str = '/docker-watcher/lock'
+        #self.etcd_client.set(lock_str, '0')
+        return True
 
     def ls(self, key):
         ret = []

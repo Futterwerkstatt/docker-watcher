@@ -48,6 +48,9 @@ def total_cluster_info():
     url = 'http://' + settings_web.master + '/cluster_info'
     req = requests.get(url)
     req_list = yaml.safe_load(req.text)
+    url2 = 'http://' + settings_web.master + '/containers_info'
+    req2 = requests.get(url2)
+    req2_list = yaml.safe_load(req2.text)
     info = {'total_cpu': 0, 'total_memory': 0, 'total_disk': 0, 'total_used_cpu': 0,
             'total_used_memory': 0, 'total_used_disk': 0}
     for d in req_list:
@@ -57,6 +60,10 @@ def total_cluster_info():
         info['total_used_cpu'] += int(d['used_cpus'])
         info['total_used_memory'] += int(d['used_memory'])
         info['total_used_disk'] += int(d['used_disk'])
+    running_instances = 0
+    for d2 in req2_list:
+        running_instances += 1
+    info['running_instances'] = running_instances
     return json.dumps(info)
 
 

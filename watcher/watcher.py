@@ -102,10 +102,6 @@ class DockerWatcher:
         for pod_container in pods_containers:  # remove not running containers from pod_cfg
             container_running = False
             for slave_container in slaves_containers:
-                #logging.warning('pod_container id: ' + str(pod_container['id']))
-                #logging.warning('slave_container id: ' + str(slave_container['Id']))
-                #logging.warning(pod_container['id'].encode('ascii') == slave_container['Id'])
-                #logging.warning(type(slave_container['Id']))
                 if pod_container['id'] == slave_container['Id']:
                     container_running = True
                     break
