@@ -65,7 +65,12 @@ def containers_info():
     logging.info('containers_info')
     url = 'http://' + settings_web.master + '/containers_info'
     req = requests.get(url)
-    res = yaml2json(req.text)
+    info = yaml.safe_load(yaml2json(req.text))
+    return_info = []
+    for container in info:
+        container['Id'] = container['Id'][0:9]
+        return_info.append(container)
+    res = yaml2json(yaml.safe_dump(return_info))
     return res
 
 

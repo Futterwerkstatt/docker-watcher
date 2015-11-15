@@ -72,7 +72,7 @@
             method: 'GET', url: url_total_cluster_info, success: function (data) {
                 var table = '<table class="table table-striped"><thead><th>Total CPU</th>' +
                         '<th>Total Memory</th>' + '<th>Total Disk</th>' + '<th>Used CPU</th>' +
-                        '<th>Used Memory</th>' + '<th>Used Disk</th></thead><tbody>';
+                        '<th>Used Memory</th>' + '<th>Used Disk</th>' + '</thead><tbody>';
                 var obj = $.parseJSON(data);
                 table += '<tr><td>' + obj['total_cpu'] + '</td>' +
                         '<td>' + obj['total_memory'] + ' MB</td>' +
@@ -90,16 +90,14 @@
             method: 'GET', url: url_containers_info, success: function (data) {
                 var table = '<table class="table table-striped"><thead><th>Slave</th>' +
                         '<th>Command</th>' + '<th>Image</th>' + '<th>Status</th>' +
-                        '</thead><tbody>';
+                        '<th>ID</th>' + '</thead><tbody>';
                 var obj = $.parseJSON(data);
                 $.each(obj, function () {
                     table += '<tr><td>' + this['slave_name'] + '</td>' +
                             '<td>' + this['Command'] + '</td>' +
                             '<td>' + this['Image'] + '</td>' +
-                            '<td>' + this['Status'] + '</td>'
-                                /*'<td>' + this['memory'] + ' MB' + '</td>' +
-                                 '<td>' + this['disk'] + ' MB' + '</td>' +
-                                 '<td>' + this['instances']*/ + '</td></tr>';
+                            '<td>' + this['Status'] + '</td>' +
+                            '<td>' + this['Id'] + '</td></tr>';
                 });
                 table += '</tbody></table>';
                 document.getElementById("containers_info").innerHTML = table;

@@ -10,6 +10,9 @@ import psutil
 import docker
 import settings_slave
 
+
+
+
 logging.basicConfig(filename=settings_slave.log, level=30,
                     format=u'%(filename)s[LINE:%(lineno)d]# %(levelname)-8s [%(asctime)s]  %(message)s', )
 ch = logging.StreamHandler(sys.stdout)

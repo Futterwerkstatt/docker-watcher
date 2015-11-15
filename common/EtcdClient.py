@@ -15,7 +15,10 @@ class EtcdClient:
     def get(self, key):
         key_str = '/docker-watcher/' + key
         logging.debug(key_str)
-        return self.etcd_client.get(key_str).value
+        value = self.etcd_client.get(key_str).value
+        if isinstance(value, unicode):
+            value = value.encode('ascii')
+        return value
 
     def lock(self):
         lock_str = '/docker-watcher/lock'

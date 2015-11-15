@@ -6,6 +6,8 @@ import os
 import yaml
 import ipdb
 
+
+
 sys.path.insert(1, os.path.join(sys.path[0], '..'))
 from common import EtcdClient
 import time
@@ -20,7 +22,6 @@ etcd_client = EtcdClient.EtcdClient(settings_watcher.etcd_host, settings_watcher
 
 
 class DockerWatcher:
-
     def get_pods_running_on_slave(self, slavename):
         url = 'http://' + slavename + '/get_pods'
         req = requests.get(url)
@@ -35,7 +36,7 @@ class DockerWatcher:
             return 0
         else:
             logging.warning('pod ' + pod + ' running on ' + slave + ' id: ' + req.text)
-        return req.text
+        return req.text.encode('ascii')
 
     def run_pods(self):
         logging.warning('run_pods')
@@ -95,9 +96,16 @@ class DockerWatcher:
             for d in pod_containers:  # loop through slave running containers
                 pods_containers.append({'pod': pod, 'slave': d['slave'], 'id': d['id']})
 
+        logging.warning('slaves_containers: ' + str(len(slaves_containers)))
+        logging.warning('pods_containers: ' + str(len(pods_containers)))
+
         for pod_container in pods_containers:  # remove not running containers from pod_cfg
             container_running = False
             for slave_container in slaves_containers:
+                #logging.warning('pod_container id: ' + str(pod_container['id']))
+                #logging.warning('slave_container id: ' + str(slave_container['Id']))
+                #logging.warning(pod_container['id'].encode('ascii') == slave_container['Id'])
+                #logging.warning(type(slave_container['Id']))
                 if pod_container['id'] == slave_container['Id']:
                     container_running = True
                     break
@@ -111,7 +119,7 @@ class DockerWatcher:
                 slave_cfg['used_memory'] = int(slave_cfg['used_memory']) - int(pod_cfg['memory'])
                 slave_cfg['used_disk'] = int(slave_cfg['used_disk']) - int(pod_cfg['disk'])
                 etcd_client.set('slaves/' + pod_container['slave'], yaml.safe_dump(slave_cfg))
-                logging.warning('pod ' + pod + ' container ' + pod_container['id'] +
+                logging.warning('pod ' + pod + ' container ' + pod_container['id'].encode('ascii') +
                                 ' not running, scheduling to run')
         logging.warning('check_pods finished')
 
