@@ -21,16 +21,20 @@ docker_client = docker.Client(base_url=settings_slave.docker_url)
 
 class DockerWatcherSlave:
     class InfoHandler(tornado.web.RequestHandler):
+
         def return_mb(self, value):
             return int(value / float(2 ** 20))
+
+        def return_gb(self, value):
+            return int(value / float(2 ** 30))
 
         def get(self):
             logging.warning('/info')
             info_dict = {}
             info_dict['total_cpus'] = psutil.cpu_count()
-            info_dict['total_memory'] = self.return_mb(psutil.virtual_memory().total)
-            info_dict['total_disk'] = self.return_mb(psutil.disk_usage('/').total)
-            # info_dict['total_network'] = psutil.net_if_stats()['eth0'].speed
+            info_dict['total_memory'] = self.return_gb(psutil.virtual_memory().total)
+            info_dict['total_disk'] = self.return_gb(psutil.disk_usage('/').total)
+            info_dict['total_network'] = psutil.net_if_stats()['eth0'].speed
             self.write(yaml.dump(info_dict))
             self.set_status(200)
 
@@ -49,8 +53,14 @@ class DockerWatcherSlave:
             command = data['command']
             pod_name = data['name']
             memory = data['memory']
-            logging.warning('pull ' + image)
-            docker_client.pull(image)
+            slave_images = []
+            images_data = docker_client.images()
+            for i in images_data:
+                for j in i['RepoTags']:
+                    slave_images.append(j)
+            if not image in slave_images:
+                logging.warning('pull ' + image)
+                docker_client.pull(image)
             logging.warning('create_container')
             self.container = docker_client.create_container(
                 image=image, command=command)

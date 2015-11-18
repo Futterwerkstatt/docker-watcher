@@ -36,11 +36,11 @@
                 $.each(obj, function () {
                     table += '<tr><td>' + this['name'] + '</td>' +
                             '<td>' + this['total_cpus'] + '</td>' +
-                            '<td>' + this['total_memory'] + ' MB' + '</td>' +
-                            '<td>' + this['total_disk'] + ' MB' + '</td>' +
+                            '<td>' + this['total_memory'] + ' GB' + '</td>' +
+                            '<td>' + this['total_disk'] + ' GB' + '</td>' +
                             '<td>' + this['used_cpus'] + '</td>' +
-                            '<td>' + this['used_memory'] + ' MB' + '</td>' +
-                            '<td>' + this['used_disk'] + ' MB' + '</td></tr>';
+                            '<td>' + this['used_memory'] + ' GB' + '</td>' +
+                            '<td>' + this['used_disk'] + ' GB' + '</td></tr>';
                 });
                 table += '</tbody></table>';
                 document.getElementById("cluster_info").innerHTML = table;
@@ -59,8 +59,8 @@
                             '<td>' + this['command'] + '</td>' +
                             '<td>' + this['image'] + '</td>' +
                             '<td>' + this['cpus'] + '</td>' +
-                            '<td>' + this['memory'] + ' MB' + '</td>' +
-                            '<td>' + this['disk'] + ' MB' + '</td>' +
+                            '<td>' + this['memory'] + ' GB' + '</td>' +
+                            '<td>' + this['disk'] + ' GB' + '</td>' +
                             '<td>' + this['instances'] + '</td></tr>';
                 });
                 table += '</tbody></table>';
@@ -76,11 +76,11 @@
                         '<th>Running Instances</th>' + '</thead><tbody>';
                 var obj = $.parseJSON(data);
                 table += '<tr><td>' + obj['total_cpu'] + '</td>' +
-                        '<td>' + obj['total_memory'] + ' MB</td>' +
-                        '<td>' + obj['total_disk'] + ' MB </td>' +
+                        '<td>' + obj['total_memory'] + ' GB</td>' +
+                        '<td>' + obj['total_disk'] + ' GB </td>' +
                         '<td>' + obj['total_used_cpu'] + '</td>' +
-                        '<td>' + obj['total_used_memory'] + ' MB' + '</td>' +
-                        '<td>' + obj['total_used_disk'] + ' MB' +
+                        '<td>' + obj['total_used_memory'] + ' GB' + '</td>' +
+                        '<td>' + obj['total_used_disk'] + ' GB' +
                         '<td>' + obj['running_instances'] + '</td></tr>';
 
                 table += '</tbody></table>';

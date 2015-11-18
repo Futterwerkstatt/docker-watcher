@@ -51,11 +51,12 @@ class DockerWatcher:
                 instances = pod_config['instances']
                 if len(running_containers) < instances:
                     containers_to_run = instances - len(running_containers)
-                    for slave in slaves:
-                        if containers_to_run == 0:
-                            break
-                        slave_cfg = yaml.safe_load(etcd_client.get('slaves/' + slave))
-                        if not any(d.get('slave', None) == slave for d in running_containers):
+                    while containers_to_run != 0:
+                        for slave in slaves:
+                            if containers_to_run == 0:
+                                break
+                            slave_cfg = yaml.safe_load(etcd_client.get('slaves/' + slave))
+                            #if not any(d.get('slave', None) == slave for d in running_containers):
                             slave_free_cpus = int(slave_cfg['total_cpus']) - int(slave_cfg['used_cpus'])
                             slave_free_memory = int(slave_cfg['total_memory']) - int(slave_cfg['used_memory'])
                             slave_free_disk = int(slave_cfg['total_disk']) - int(slave_cfg['used_disk'])
@@ -93,6 +94,7 @@ class DockerWatcher:
 
         for pod in pods:  # get all pods containers
             pod_containers = yaml.safe_load(etcd_client.get('pods/' + pod))['containers']
+
             for d in pod_containers:  # loop through slave running containers
                 pods_containers.append({'pod': pod, 'slave': d['slave'], 'id': d['id']})
 
@@ -121,13 +123,13 @@ class DockerWatcher:
 
     def run(self):
         while True:
-            etcd_client.lock()
+            #etcd_client.lock()
             self.run_pods()
-            etcd_client.unlock()
+            #etcd_client.unlock()
             time.sleep(settings_watcher.sleep)
-            etcd_client.lock()
+            #etcd_client.lock()
             self.check_pods()
-            etcd_client.unlock()
+            #etcd_client.unlock()
             logging.warning('sleeping for ' + str(settings_watcher.sleep) + ' seconds')
             time.sleep(settings_watcher.sleep)
 
