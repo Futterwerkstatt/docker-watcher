@@ -26,8 +26,8 @@ class DockerWatcherSlave:
             return int(value / float(2 ** 20))
 
         def return_gb(self, value):
-            return int(value / float(2 ** 30))
-
+            #return int(value / float(2 ** 30))
+            return int(value / float(1000000000))
         def get(self):
             logging.warning('/info')
             info_dict = {}

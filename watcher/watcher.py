@@ -41,7 +41,7 @@ class DockerWatcher:
     def run_pods(self):
         logging.warning('run_pods')
         pods = etcd_client.ls('pods/')
-        logging.warning('pods: ' + str(pods))
+        #logging.warning('pods: ' + str(pods))
         slaves = etcd_client.ls('slaves/')
         for pod in pods:
             logging.warning('running pod ' + pod)
@@ -141,4 +141,3 @@ if __name__ == '__main__':
         docker_watcher.run()
     except Exception, e:
         logging.error(e, exc_info=True)
-        exit(1)
